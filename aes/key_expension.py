@@ -18,6 +18,26 @@ def key_expension(key: bytes, rounds: int) -> List[Word]:
     return expended_key
 
 
+def get_first_key(key: bytes, rounds: int) -> bytes:
+    if len(key) != 16:
+        raise ValueError(f"Wrong key length: {len(key)}")
+    expended_key = [key[i : i + len(key) // 4] for i in range(0, len(key), 4)]
+    fully_expended_key = reverse_key_expension(expended_key, rounds)
+    return b"".join(fully_expended_key[:4])
+
+
+def reverse_key_expension(expended_key: List[Word], rounds: int) -> List[Word]:
+    for r in reversed(range(1, rounds)):
+        for _ in range(3):
+            expended_key.insert(0, xor(expended_key[2], expended_key[3]))
+        rot = _rot_word(expended_key[2])
+        sub = _sub_word(rot)
+        xored = xor(expended_key[3], _r_con(r))
+        first_column = xor(xored, sub)
+        expended_key.insert(0, first_column)
+    return expended_key
+
+
 def _rot_word(word: Word) -> Word:
     if len(word) != 4:
         raise ValueError(f"Wrong word length: {len(word)}")

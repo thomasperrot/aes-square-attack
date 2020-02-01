@@ -37,3 +37,27 @@ and a module dedicated to square attack.
    and documenting is pretty boring.
 
 .. _website: https://www.davidwong.fr/blockbreakers/
+
+Quickstart
+**********
+
+This attack is a chosen plaintext attack, so you must find a way to encrypt the initial delta set. To do this, implement
+your own function, respecting the following signature:
+
+.. code-block:: python
+
+   def get_encrypted_delta_set(inactive_value: int, *args, **kwargs) -> List[State]:
+
+
+As an example, the one implemented in this source code is just a homemade AES that encrypts the delta set using a
+supplied key.
+
+Once it is done, you can perform the attack using the following functions:
+
+.. code-block:: python
+
+    rounds = 4
+    get_encrypted_ds = partial(get_encrypted_delta_set, my_extra_args)
+    last_key = crack_last_key(get_encrypted_ds)
+    cracked_key = get_first_key(last_key, rounds + 1)
+    print(f"[+] Found key: {cracked_key}")
