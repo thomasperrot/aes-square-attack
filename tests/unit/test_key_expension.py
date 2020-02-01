@@ -2,7 +2,7 @@ import binascii
 
 import pytest
 
-from aes.key_expension import _sub_word, key_expension, reverse_key_expension
+from aes.key_expension import _sub_word, get_first_key, key_expension, reverse_key_expension
 
 
 @pytest.mark.parametrize(
@@ -37,6 +37,12 @@ def test_key_expension():
             "d014f9a8c9ee2589e13f0cc8b6630ca6",
         ]
     ]
+
+
+def test_get_first_key():
+    key = binascii.unhexlify("3d80477d4716fe3e1e237e446d7a883b")
+    first_key = get_first_key(key, 4)
+    assert first_key == binascii.unhexlify("2b7e151628aed2a6abf7158809cf4f3c")
 
 
 def test_reverse_key_expension():
