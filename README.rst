@@ -2,7 +2,7 @@
 AES Square Attack
 *****************
 
-.. image:: https://img.shields.io/badge/python-3.5+-blue
+.. image:: https://img.shields.io/badge/python-3.6+-blue
    :target: https://www.python.org/downloads/release/python-350/
    :alt: Python3.5+ compatible
 
