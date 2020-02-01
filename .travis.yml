@@ -1,0 +1,25 @@
+language: python
+cache: pip
+env:
+  - PYTEST_ADDOPTS="--cov-append"
+matrix:
+  include:
+  - python: 3.5
+    env:
+      TOX_ENV: py35-unit-tests
+  - python: 3.6
+    env:
+      TOX_ENV: py36-unit-tests
+  - python: 3.7
+    env:
+      TOX_ENV: py37-unit-tests
+  - python: 3.7
+    env:
+      TOX_ENV: check-lint
+install:
+  - pip install tox codecov
+  - tox --notest -e $TOX_ENV
+script:
+  - tox -e $TOX_ENV
+after_success:
+  - codecov

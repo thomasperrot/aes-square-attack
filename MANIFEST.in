@@ -1,0 +1,6 @@
+exclude requirements.txt
+exclude tox.ini
+include README.rst
+include LICENSE.rst
+prune tests
+prune scripts
