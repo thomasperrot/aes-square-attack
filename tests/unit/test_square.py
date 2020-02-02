@@ -3,28 +3,22 @@ from functools import partial
 
 import pytest
 
-from aes.square import (
-    _get_delta_set,
-    crack_last_key,
-    get_encrypted_delta_set,
-    guess_position,
-    is_guess_correct,
-    reverse_state,
-)
+from aes.connectors import encrypt_delta_set
+from aes.square import crack_last_key, get_delta_set, guess_position, is_guess_correct, reverse_state
 
 
 @pytest.mark.slow
 def test_crack_last_key():
     key = binascii.unhexlify("2b7e151628aed2a6abf7158809cf4f3c")
-    get_encrypted_ds = partial(get_encrypted_delta_set, key)
+    get_encrypted_ds = partial(encrypt_delta_set, key)
     cracked_key = crack_last_key(get_encrypted_ds)
     assert cracked_key == binascii.unhexlify("ef44a541a8525b7fb671253bdb0bad00")
 
 
 def test_guess_position():
     key = binascii.unhexlify("2b7e151628aed2a6abf7158809cf4f3c")
-    get_encrypted_ds = partial(get_encrypted_delta_set, key)
-    guess = guess_position(0, get_encrypted_ds)
+    ds_encrypter = partial(encrypt_delta_set, key)
+    guess = guess_position(ds_encrypter, 0)
     assert guess == 239
 
 
@@ -36,19 +30,8 @@ def test_is_guess_correct(byte_values, expected):
     assert is_guess_correct(byte_values) is expected
 
 
-def test_get_encrypted_delta_set():
-    key = binascii.unhexlify("2b7e151628aed2a6abf7158809cf4f3c")
-    encrypted_delta_set = get_encrypted_delta_set(key, 0xCC, rounds=3)
-    for i in range(4):
-        for j in range(4):
-            r = 0
-            for k in range(len(encrypted_delta_set)):
-                r ^= encrypted_delta_set[k][i][j]
-            assert r == 0
-
-
 def test_get_delta_set():
-    ds = _get_delta_set(0xCC)
+    ds = get_delta_set(0xCC)
     for i in range(4):
         for j in range(4):
             for k in range(len(ds)):
@@ -60,7 +43,8 @@ def test_get_delta_set():
 
 def test_reverse_square():
     key = binascii.unhexlify("2b7e151628aed2a6abf7158809cf4f3c")
-    encrypted_ds = get_encrypted_delta_set(key, inactive_value=0xCC)
+    ds = get_delta_set(0xCC)
+    encrypted_ds = encrypt_delta_set(key, ds)
     reversed_bytes = reverse_state(239, (0, 0), encrypted_ds)
     assert reversed_bytes == [
         37,

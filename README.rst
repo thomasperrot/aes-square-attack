@@ -31,33 +31,55 @@ This repository is a simple implementation of the Square Attack against 4 rounds
 (all credits goes to David Wong). The source code gathers all the functions to encrypt using 128-bit AES algorithm,
 and a module dedicated to square attack.
 
-.. warning::
-
-   The source code has absolutely no documentation, as all you need is already provided in the above mention website,
-   and documenting is pretty boring.
+The source code has absolutely no documentation, as all you need is already provided in the above mention website,
+and documenting is pretty boring.
 
 .. _website: https://www.davidwong.fr/blockbreakers/
 
 Quickstart
 **********
 
+To install the package:
+
+.. code-block:: bash
+
+   pip install .
+
+
 This attack is a chosen plaintext attack, so you must find a way to encrypt the initial delta set. To do this, implement
 your own function, respecting the following signature:
 
 .. code-block:: python
 
-   def get_encrypted_delta_set(inactive_value: int, *args, **kwargs) -> List[State]:
+   from typing import Iterable, List
+   from aes.common import State
+
+   def encrypt_delta_set(delta_set: Iterable[State]) -> List[State]:
+       ...
 
 
 As an example, the one implemented in this source code is just a homemade AES that encrypts the delta set using a
-supplied key.
+supplied key. Use `functools.partial` if you need extra arguments (see `tests/functional/test_crack_key.py`).
 
-Once it is done, you can perform the attack using the following functions:
+Once it is done, you can perform the attack using the following snippet:
 
 .. code-block:: python
 
-    rounds = 4
-    get_encrypted_ds = partial(get_encrypted_delta_set, my_extra_args)
-    last_key = crack_last_key(get_encrypted_ds)
-    cracked_key = get_first_key(last_key, rounds + 1)
-    print(f"[+] Found key: {cracked_key}")
+    import binascii
+    from functools import partial
+
+    from aes.square import crack_key
+
+    def encrypt_delta_set(delta_set: Iterable[State]) -> List[State]:
+        ...
+
+    cracked_key = crack_key(encrypt_delta_set)
+    print(f"[+] Found key: {binascii.hexlify(cracked_key)}")
+
+
+Issues
+******
+
+If you encounter an issue, please fill free to open an issue_.
+
+.. _issue: https://github.com/thomasperrot/aes-square-attack/issues

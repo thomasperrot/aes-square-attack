@@ -1,29 +1,40 @@
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 from typing import Callable, Iterable, List, Tuple
 
 import numpy as np
 
-from .aes import transform_state
 from .common import S_BOX, State
+from .key_expension import get_first_key
 
 SQUARE_ROUNDS = 4
 REVERSED_S_BOX = {v: k for k, v in S_BOX.items()}
 
 
-def crack_last_key(get_encrypted_ds: Callable) -> bytes:
-    last_bytes = []
-    for position in range(16):
-        b = guess_position(position, get_encrypted_ds)
-        last_bytes.append(b)
+def crack_key(encrypt_ds: Callable[[Iterable[State]], List[State]], rounds: int = SQUARE_ROUNDS) -> bytes:
+    last_key = crack_last_key(encrypt_ds)
+    cracked_key = get_first_key(last_key, rounds + 1)
+    return cracked_key
+
+
+def crack_last_key(encrypt_ds: Callable[[Iterable[State]], List[State]]) -> bytes:
+    last_bytes = [0] * 16
+    positions = list(range(16))
+    position_guesser = partial(guess_position, encrypt_ds)
+    with ProcessPoolExecutor() as executor:
+        for position, found_byte in zip(positions, executor.map(position_guesser, positions)):
+            last_bytes[position] = found_byte
     return bytes(last_bytes)
 
 
-def guess_position(position: int, get_encrypted_ds: Callable) -> int:
+def guess_position(encrypt_ds: Callable[[Iterable[State]], List[State]], position: int) -> int:
     position_in_state = (position % 4, position // 4)
     for inactive_value in range(0x100):
-        ds = get_encrypted_ds(inactive_value)
+        ds = get_delta_set(inactive_value)
+        encrypted_ds = encrypt_ds(ds)
         correct_guesses = []
         for guess in range(0x100):
-            reversed_bytes = reverse_state(guess, position_in_state, ds)
+            reversed_bytes = reverse_state(guess, position_in_state, encrypted_ds)
             if is_guess_correct(reversed_bytes):
                 correct_guesses.append(guess)
         if len(correct_guesses) == 1:
@@ -50,12 +61,7 @@ def is_guess_correct(reversed_bytes: Iterable[int]) -> bool:
     return r == 0
 
 
-def get_encrypted_delta_set(key: bytes, inactive_value: int, rounds: int = SQUARE_ROUNDS) -> List[State]:
-    delta_set = _get_delta_set(inactive_value)
-    return [transform_state(s, key, rounds=rounds) for s in delta_set]
-
-
-def _get_delta_set(inactive_value: int) -> List[State]:
+def get_delta_set(inactive_value: int) -> List[State]:
     base_state = np.full((4, 4), inactive_value)
     delta_set = []
     for i in range(256):
