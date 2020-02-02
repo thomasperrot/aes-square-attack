@@ -1,3 +1,5 @@
+import binascii
+import logging
 from concurrent.futures import ProcessPoolExecutor
 from functools import partial
 from typing import Callable, Iterable, List, Tuple
@@ -13,6 +15,7 @@ REVERSED_S_BOX = {v: k for k, v in S_BOX.items()}
 
 def crack_key(encrypt_ds: Callable[[Iterable[State]], List[State]], rounds: int = SQUARE_ROUNDS) -> bytes:
     last_key = crack_last_key(encrypt_ds)
+    logging.info(f"[+] Found last key: {binascii.hexlify(last_key).decode()}")
     cracked_key = get_first_key(last_key, rounds + 1)
     return cracked_key
 
@@ -20,21 +23,32 @@ def crack_key(encrypt_ds: Callable[[Iterable[State]], List[State]], rounds: int 
 def crack_last_key(encrypt_ds: Callable[[Iterable[State]], List[State]]) -> bytes:
     last_bytes = [0] * 16
     positions = list(range(16))
-    position_guesser = partial(guess_position, encrypt_ds)
+    logging.info("Gathering encrypted delta set...")
+    encrypted_ds = gather_encrypted_delta_sets(encrypt_ds)
+    position_guesser = partial(guess_position, encrypted_ds)
+    logging.info("Cracking key...")
     with ProcessPoolExecutor() as executor:
         for position, found_byte in zip(positions, executor.map(position_guesser, positions)):
             last_bytes[position] = found_byte
+    logging.info("Finished cracking key")
     return bytes(last_bytes)
 
 
-def guess_position(encrypt_ds: Callable[[Iterable[State]], List[State]], position: int) -> int:
-    position_in_state = (position % 4, position // 4)
-    for inactive_value in range(0x100):
+def gather_encrypted_delta_sets(encrypt_ds: Callable[[Iterable[State]], List[State]]) -> Iterable[Iterable[State]]:
+    encrypted_ds = []
+    for inactive_value in range(0x10):
+        logging.debug(f"[ ] Encrypting delta set {hex(inactive_value)}...")
         ds = get_delta_set(inactive_value)
-        encrypted_ds = encrypt_ds(ds)
+        encrypted_ds.append(encrypt_ds(ds))
+    return encrypted_ds
+
+
+def guess_position(encrypted_delta_sets: Iterable[Iterable[State]], position: int) -> int:
+    position_in_state = (position % 4, position // 4)
+    for encrypted_delta_set in encrypted_delta_sets:
         correct_guesses = []
         for guess in range(0x100):
-            reversed_bytes = reverse_state(guess, position_in_state, encrypted_ds)
+            reversed_bytes = reverse_state(guess, position_in_state, encrypted_delta_set)
             if is_guess_correct(reversed_bytes):
                 correct_guesses.append(guess)
         if len(correct_guesses) == 1:

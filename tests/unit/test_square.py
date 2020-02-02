@@ -4,7 +4,14 @@ from functools import partial
 import pytest
 
 from aes.connectors import encrypt_delta_set
-from aes.square import crack_last_key, get_delta_set, guess_position, is_guess_correct, reverse_state
+from aes.square import (
+    crack_last_key,
+    gather_encrypted_delta_sets,
+    get_delta_set,
+    guess_position,
+    is_guess_correct,
+    reverse_state,
+)
 
 
 @pytest.mark.slow
@@ -18,7 +25,8 @@ def test_crack_last_key():
 def test_guess_position():
     key = binascii.unhexlify("2b7e151628aed2a6abf7158809cf4f3c")
     ds_encrypter = partial(encrypt_delta_set, key)
-    guess = guess_position(ds_encrypter, 0)
+    encrypted_delta_sets = gather_encrypted_delta_sets(ds_encrypter)
+    guess = guess_position(encrypted_delta_sets, 0)
     assert guess == 239
 
 

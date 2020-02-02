@@ -10,7 +10,7 @@ from aes.square import crack_key
 @pytest.mark.slow
 def test_crack_key():
     # given
-    key = binascii.unhexlify("3d80477d4716fe3e1e237e446d7a883b")
+    key = binascii.unhexlify("3a80477d4716fe3e1e24ae446d7a883b")
     get_encrypted_ds = partial(encrypt_delta_set, key)
 
     # when
